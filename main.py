@@ -30,27 +30,22 @@ def run_experiments_with_threads(repo_path, dataset, output_dir, sched_time_rati
     # Prepare the experiment
     env = Environment(scenario, evaluation_metric)
 
-    parameters = [(i + 1, output_dir, trials, env) for i in range(ITERATIONS)]
-
     # create a file with a unique header for the scenario (workaround)
     env.monitor.create_file(f"{output_dir}/{str(env.scenario_provider)}.csv")
 
     # Compute time
     start = time.time()
 
-    with multiprocessing.Pool(get_pool_size()) as p:
-        p.starmap(exp_run_industrial_dataset, parameters)
-
-    exp_run_industrial_dataset(1, output_dir, trials, env)
+    env.run_single(1, trials)
+    env.store_experiment(f"{output_dir}/{str(env.scenario_provider)}.csv")
 
     end = time.time()
 
     print(f"Time expend to run the experiments: {end - start}\n\n")
 
 
-def exp_run_industrial_dataset(iteration, output_dir, trials, env: Environment):
-    env.run_single(iteration, trials)
-    env.store_experiment(f"{output_dir}/{str(env.scenario_provider)}.csv")
+def get_metric(dataset):
+    return NAPFDVerdictMetric() if dataset in INDUSTRIAL_DATASETS else NAPFDMetric()
 
 
 if __name__ == "__main__":
@@ -70,11 +65,14 @@ if __name__ == "__main__":
 
     time_ratio = [float(t) for t in args.sched_time_ratio]
 
+    parameters = []
+
     for tr in time_ratio:
         output_dir = os.path.join(args.output_dir, f"time_ratio_{int(tr * 100)}")
         Path(output_dir).mkdir(parents=True, exist_ok=True)
 
         for dataset in args.datasets:
-            metric = NAPFDVerdictMetric() if dataset in INDUSTRIAL_DATASETS else NAPFDMetric()
+            parameters.append((args.dataset_dir, dataset, output_dir, tr, get_metric(dataset)))
 
-            run_experiments_with_threads(args.dataset_dir, dataset, output_dir, tr, metric)
+    with multiprocessing.Pool(get_pool_size()) as p:
+        p.starmap(run_experiments_with_threads, parameters)
