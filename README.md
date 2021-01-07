@@ -34,7 +34,7 @@ This tool allows to find optimal solutions (in a deterministic way) for traditio
 ----------------------------------
 
 
-# :pencil: Citation 
+# Citation
 
 If this tool contributes to a project which leads to a scientific publication, I would appreciate a citation.
 
@@ -42,7 +42,7 @@ If this tool contributes to a project which leads to a scientific publication, I
 
 ```
 
-# :red_circle: Installing required dependencies
+# Installing required dependencies
 
 The following command allows to install the required dependencies:
 
@@ -50,7 +50,7 @@ The following command allows to install the required dependencies:
  $ pip install -r requirements.txt
  ```
 
-# :floppy_disk: Datasets
+# Datasets 
 
 The datasets used in the examples (and much more datasets) are available at [Harvard Dataverse Repository](https://dataverse.harvard.edu/dataverse/gres-ufpr). Here, we present the datasets used in this README.
 
@@ -88,7 +88,7 @@ Describe about the variable is_industrail_dataset inside the code.
 
 #  Using the tool
 
-## 📌 Running for a traditional system 
+## Running for a traditional system 
 
 🔥**Main Option #1**🔥.
 
@@ -106,7 +106,7 @@ python main.py --project_dir 'data' --datasets 'alibaba@druid' 'deeplearning4j@d
 The another parameters available are:
 - `--sched_time_ratio` tghat represents the Schedule Time Ratio, that is, time constraints that represents the time available to run the tests. **Default**: 0.1 (10%), 0.5 (50%), and 0.8 (80%) of the time available.
 
-## 📌 Running for a HCS system
+## Running for a HCS system
 
 In this option, we apply two strategies to find optimal solutions for the variants: **Whole Test Set Strategy (WTS)** and **Variant Test Set Strategy (VTS)**. For more information read **Ref2** in [References](#references)
 
