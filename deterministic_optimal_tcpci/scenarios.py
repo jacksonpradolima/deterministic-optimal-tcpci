@@ -1,12 +1,16 @@
 import json
 import os
+import warnings
+warnings.filterwarnings("ignore")
 
 import pandas as pd
 
-INDUSTRIAL_DATASETS = ['iofrol', 'paintcontrol', 'gsdtsr', 'lexisnexis']
+INDUSTRIAL_DATASETS = ['iofrol', 'paintcontrol',
+                       'gsdtsr', 'lexisnexis', 'libssh@libssh-mirror']
 
 
 class VirtualScenario(object):
+
     def __init__(self, available_time, testcases, build_id, total_build_duration):
         self.available_time = available_time
         self.testcases = testcases
@@ -24,6 +28,17 @@ class VirtualScenario(object):
         return self.testcases
 
 
+class VirtualHCSScenario(VirtualScenario):
+
+    def __init__(self, available_time, testcases, build_id, total_build_duration, variants):
+        super().__init__(available_time, testcases, build_id, total_build_duration)
+
+        self.variants = variants
+
+    def get_variants(self):
+        return self.variants
+
+
 class IndustrialDatasetScenarioProvider():
     """
     Scenario provider to process CSV files for experimental evaluation.
@@ -31,14 +46,16 @@ class IndustrialDatasetScenarioProvider():
     """
 
     def __init__(self, tcfile, sched_time_ratio=0.5):
+        self.project_name = os.path.dirname(tcfile).split(os.sep)[-2]
         self.name = os.path.split(os.path.dirname(tcfile))[1]
 
         self.tcdf = pd.read_csv(tcfile, sep=';', parse_dates=['LastRun'])
 
-        self.is_industrial_dataset = self.name in INDUSTRIAL_DATASETS
+        self.is_industrial_dataset = self.name in INDUSTRIAL_DATASETS or self.project_name in INDUSTRIAL_DATASETS
 
         if not self.is_industrial_dataset:
-            self.tcdf['LastResults'] = self.tcdf['LastResults'].apply(json.loads)
+            self.tcdf['LastResults'] = self.tcdf[
+                'LastResults'].apply(json.loads)
 
         self.tcdf["Duration"] = self.tcdf["Duration"].apply(
             lambda x: float(x.replace(',', '')) if type(x) == str else x)
@@ -57,7 +74,8 @@ class IndustrialDatasetScenarioProvider():
         # LastRun | Previous last execution of the test case as date - time - string(Format: `YYYY - MM - DD HH: ii`)
         # NumRan | Test runs
         # NumErrors | Test errors revealed
-        # LastResults | List of previous test results(Failed: 1, Passed: 0), ordered by ascending age
+        # LastResults | List of previous test results(Failed: 1, Passed: 0),
+        # ordered by ascending age
 
         if self.is_industrial_dataset:
             self.tc_fieldnames = ['Name', 'Duration',
@@ -68,6 +86,9 @@ class IndustrialDatasetScenarioProvider():
 
     def __str__(self):
         return self.name
+
+    def get_avail_time_ratio(self):
+        return self.avail_time_ratio
 
     def last_build(self, build):
         self.build = build
@@ -99,6 +120,66 @@ class IndustrialDatasetScenarioProvider():
                                         available_time=total_time,
                                         build_id=self.build,
                                         total_build_duration=self.total_build_duration)
+
+        return self.scenario
+
+    # Generator functions
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        sc = self.get()
+
+        if sc is None:
+            raise StopIteration()
+
+        return sc
+
+
+class IndustrialDatasetHCSScenarioProvider(IndustrialDatasetScenarioProvider):
+
+    def __init__(self, tcfile, variantsfile, sched_time_ratio=0.5):
+        super().__init__(tcfile, sched_time_ratio)
+
+        self.variants = pd.read_csv(
+            variantsfile, sep=';', parse_dates=['LastRun'])
+
+    def get_total_variants(self):
+        return self.variants['Variant'].nunique()
+
+    def get_all_variants(self):
+        return self.variants['Variant'].unique()
+
+    def get(self):
+        """
+        This function is called when the __next__ function is called.
+        In this function the data is "separated" by builds. Each next build is returned.
+        :return:
+        """
+        self.build += 1
+
+        # Stop when reaches the max build
+        if self.build > self.max_builds:
+            self.scenario = None
+            return None
+
+        # Select the data for the current build
+        builddf = self.tcdf.loc[self.tcdf.BuildId == self.build]
+
+        variants = self.variants.loc[self.variants.BuildId == self.build]
+
+        # Convert the solutions to a list of dict
+        seltc = builddf[self.tc_fieldnames]
+
+        self.total_build_duration = builddf['Duration'].sum()
+        total_time = self.total_build_duration * self.avail_time_ratio
+
+        # This test set is a "scenario" that must be evaluated.
+        self.scenario = VirtualHCSScenario(testcases=seltc,
+                                           available_time=total_time,
+                                           build_id=self.build,
+                                           total_build_duration=self.total_build_duration,
+                                           variants=variants)
 
         return self.scenario
 
