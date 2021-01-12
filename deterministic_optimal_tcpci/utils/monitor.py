@@ -9,7 +9,6 @@ class MonitorCollector(object):
     """
 
     def __init__(self):
-
         """
         experiment: Experiment number
         step: Part number (Build) from scenario that is been analyzed
@@ -44,6 +43,7 @@ class MonitorCollector(object):
                           # 'tests_ran_time',
                           'tests_not_ran',
                           'ttf',
+                          'ttf_duration',
                           'time_reduction',
                           'fitness',
                           'cost',
@@ -54,7 +54,8 @@ class MonitorCollector(object):
 
         self.df = pd.DataFrame(columns=self.col_names)
 
-        # the temp is used when we have more than 1000 records. This is used to improve the performance
+        # the temp is used when we have more than 1000 records. This is used to
+        # improve the performance
         self.temp_df = pd.DataFrame(columns=self.col_names)
 
     def collect_from_temp(self):
