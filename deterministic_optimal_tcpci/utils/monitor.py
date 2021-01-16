@@ -66,7 +66,7 @@ class MonitorCollector(object):
         # This can boost our performance by around 10 times
 
     def collect(self, scenario_provider, available_time, experiment, t, policy, reward_function,
-                metric, total_build_duration, duration, rewards, prioritization_order):
+                metric, total_build_duration, prioritization_time, rewards, prioritization_order):
         """
         This function collects the feedback of an analysis and stores in a dataframe.
         In this way, i.e., I can export a BIG experiment to CSV
@@ -92,14 +92,14 @@ class MonitorCollector(object):
             'sched_time': scenario_provider.avail_time_ratio,
             'sched_time_duration': available_time,
             'total_build_duration': total_build_duration,
-            'prioritization_time': duration,
+            'prioritization_time': prioritization_time,
             'detected': metric.detected_failures,
             'missed': metric.undetected_failures,
             'tests_ran': len(metric.scheduled_testcases),
             'tests_not_ran': len(metric.unscheduled_testcases),
             'ttf': metric.ttf,
             'ttf_duration': metric.ttf_duration,
-            'time_reduction': scenario_provider.total_build_duration - metric.ttf_duration,
+            'time_reduction': total_build_duration - metric.ttf_duration,
             'fitness': metric.fitness,
             'cost': metric.cost,
             'rewards': rewards,
