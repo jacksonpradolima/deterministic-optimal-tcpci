@@ -13,7 +13,7 @@ from deterministic_optimal_tcpci.scenarios import IndustrialDatasetScenarioProvi
 DEFAULT_EXPERIMENT_DIR = 'results/optimal_deterministic'
 DEFAULT_SCHED_TIME_RATIO = [0.1, 0.5, 0.8]
 INDUSTRIAL_DATASETS = ['iofrol', 'paintcontrol',
-                       'gsdtsr', 'lexisnexis',  'libssh@libssh-mirror']
+                       'gsdtsr', 'lexisnexis',  'libssh@libssh-mirror', 'core@dune-common']
 
 
 def get_pool_size():

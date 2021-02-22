@@ -6,7 +6,7 @@ warnings.filterwarnings("ignore")
 import pandas as pd
 
 INDUSTRIAL_DATASETS = ['iofrol', 'paintcontrol',
-                       'gsdtsr', 'lexisnexis', 'libssh@libssh-mirror']
+                       'gsdtsr', 'lexisnexis', 'libssh@libssh-mirror', 'core@dune-common']
 
 
 class VirtualScenario(object):
@@ -137,12 +137,13 @@ class IndustrialDatasetScenarioProvider():
 
 
 class IndustrialDatasetHCSScenarioProvider(IndustrialDatasetScenarioProvider):
-
     def __init__(self, tcfile, variantsfile, sched_time_ratio=0.5):
         super().__init__(tcfile, sched_time_ratio)
 
         self.variants = pd.read_csv(
             variantsfile, sep=';', parse_dates=['LastRun'])
+            
+        self.variants['Variant'] = self.variants['Variant'].apply(lambda x: x.translate({ord(c): "_" for c in "!#$%^&*()[]{};:,.<>?|`~=+"}))
 
     def get_total_variants(self):
         return self.variants['Variant'].nunique()
