@@ -50,6 +50,8 @@ class MonitorCollector(object):
                           'rewards',
                           # 'recall',
                           'avg_precision',
+                          'reward_timerank',
+                          'reward_rnfail',
                           'prioritization_order']
 
         self.df = pd.DataFrame(columns=self.col_names)
@@ -66,7 +68,8 @@ class MonitorCollector(object):
         # This can boost our performance by around 10 times
 
     def collect(self, scenario_provider, available_time, experiment, t, policy, reward_function,
-                metric, total_build_duration, prioritization_time, rewards, prioritization_order):
+                metric, total_build_duration, prioritization_time, rewards,
+                reward_timerank, reward_rnfail, prioritization_order):
         """
         This function collects the feedback of an analysis and stores in a dataframe.
         In this way, i.e., I can export a BIG experiment to CSV
@@ -104,6 +107,8 @@ class MonitorCollector(object):
             'cost': metric.cost,
             'rewards': rewards,
             'avg_precision': metric.avg_precision,
+            'reward_timerank': reward_timerank,
+            'reward_rnfail': reward_rnfail,
             'prioritization_order': prioritization_order
         }
 

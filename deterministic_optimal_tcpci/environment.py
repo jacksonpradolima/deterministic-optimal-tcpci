@@ -1,10 +1,13 @@
 import os
 import pickle
 import time
+import numpy as np
 from pathlib import Path
 
 from deterministic_optimal_tcpci.scenarios import IndustrialDatasetHCSScenarioProvider, VirtualHCSScenario
 from deterministic_optimal_tcpci.utils.monitor import MonitorCollector
+from deterministic_optimal_tcpci.reward import RNFailReward
+from deterministic_optimal_tcpci.reward import TimeRankReward
 
 Path("backup").mkdir(parents=True, exist_ok=True)
 
@@ -18,6 +21,8 @@ class Environment(object):
         self.scenario_provider = scenario_provider
         self.evaluation_metric = evaluation_metric
         self.is_industrial_dataset = self.scenario_provider.is_industrial_dataset
+        self.time_rank_reward = TimeRankReward()
+        self.rnfail_reward = RNFailReward()
         self.reset()
 
     def reset(self):
@@ -70,12 +75,16 @@ class Environment(object):
 
             df_main = vsc.get_testcases()
             df_main.sort_values(sort_columns, ascending=[
-                                False, True], inplace=True)
+                False, True], inplace=True)
             action = df_main['Name'].tolist()  # current test cases
 
             end = time.time()
 
             self.evaluation_metric.evaluate(df_main.to_dict(orient='record'))
+
+            # We manually evaluate the reward functions to avoid workaround saving the data
+            timerank = np.mean(self.time_rank_reward.evaluate(self.evaluation_metric, action))
+            rnfail = np.mean(self.rnfail_reward.evaluate(self.evaluation_metric, action))
 
             print(f"Exp {experiment} - Ep {t} - Deterministic " +
                   f" - NAPFD/APFDc: {self.evaluation_metric.fitness:.4f}/{self.evaluation_metric.cost:.4f}")
@@ -90,6 +99,7 @@ class Environment(object):
                                  self.scenario_provider.total_build_duration,
                                  (end - start),
                                  -1,
+                                 timerank, rnfail,
                                  action)
 
             # If we are working with HCS scenario and there are variants?
@@ -105,9 +115,10 @@ class Environment(object):
 
                     # Order by the test cases according to the main
                     # prioritization
-                    df_variant['CalcPrio'] = df_variant[
-                        'Name'].apply(lambda x: action.index(x) + 1)
+                    df_variant['CalcPrio'] = df_variant['Name'].apply(lambda x: action.index(x) + 1)
                     df_variant.sort_values(by=['CalcPrio'], inplace=True)
+
+                    action_variant = df_variant['Name'].tolist()
 
                     total_build_duration = df_variant['Duration'].sum()
                     total_time = total_build_duration * avail_time_ratio
@@ -118,8 +129,10 @@ class Environment(object):
 
                     # Submit prioritized test cases for evaluation step and get
                     # new measurements
-                    self.evaluation_metric.evaluate(
-                        df_variant.to_dict(orient='record'))
+                    self.evaluation_metric.evaluate(df_variant.to_dict(orient='record'))
+
+                    timerank = np.mean(self.time_rank_reward.evaluate(self.evaluation_metric, action_variant))
+                    rnfail = np.mean(self.rnfail_reward.evaluate(self.evaluation_metric, action_variant))
 
                     # Save the information
                     self.variant_montitors[variant].collect(self.scenario_provider,
@@ -132,7 +145,8 @@ class Environment(object):
                                                             total_build_duration,
                                                             (end - start),
                                                             -1,
-                                                            df_variant['Name'].tolist())
+                                                            timerank, rnfail,
+                                                            action_variant)
 
             # Save experiment each 50000 builds
             if restore and t % 50000 == 0:
